@@ -1,0 +1,13 @@
+[
+  {
+    "id": "conn_demo",
+    "name": "示例连接",
+    "url": "jdbc:hive2://10.0.0.1:10000/default",
+    "driverClassName": "io.transwarp.jdbc.InceptorDriver",
+    "username": "hive",
+    "password": "请替换为真实密码",
+    "driverJarFile": "inceptor-driver-x.y.z.jar",
+    "createdAt": 1700000000000,
+    "updatedAt": 1700000000000
+  }
+]

@@ -1,0 +1,336 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArgoDB 资产数据驾驶舱</title>
+<link rel="icon" href="data:,">
+<script src="https://unpkg.com/axios@1.6.0/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+:root{--bg:#080c24;--card:#0d1130;--card2:#111640;--text:#d0d5f0;--text2:#7b82a8;--blue:#4b8ef1;--green:#2ec48a;--yellow:#f0a040;--red:#e84855;--purple:#9b6dff;--cyan:#38c4d8;--border:#1a1f45;--radius:6px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:48px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.logo{font-size:17px;font-weight:700;color:#fff;letter-spacing:1px}
+.logo .accent{color:var(--blue)}
+.subtitle{font-size:10px;color:var(--text2)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.topbar select{padding:5px 28px 5px 10px;background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:11px;cursor:pointer;font-family:inherit;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%237b82a8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+.topbar select:focus{outline:none;border-color:var(--blue)}
+.btn{padding:5px 12px;border:1px solid var(--border);border-radius:4px;font-size:11px;cursor:pointer;background:var(--card2);color:var(--text);font-family:inherit;transition:all .15s}
+.btn:hover{border-color:var(--blue);color:#fff}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:#609ef4}
+
+.kpi-row{display:flex;gap:8px;padding:12px 20px;flex-shrink:0}
+.kpi-card{flex:1;background:var(--card);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:10px;border-top:3px solid transparent}
+.kpi-card.c1{border-top-color:var(--blue)}.kpi-card.c2{border-top-color:var(--purple)}.kpi-card.c3{border-top-color:var(--green)}.kpi-card.c4{border-top-color:var(--cyan)}.kpi-card.c5{border-top-color:var(--yellow)}.kpi-card.c6{border-top-color:var(--red)}.kpi-card.c7{border-top-color:#ff6b9d}.kpi-card.c8{border-top-color:#5ce6b0}
+.kpi-icon{width:38px;height:38px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.c1 .kpi-icon{background:rgba(75,142,241,.15)}.c2 .kpi-icon{background:rgba(155,109,255,.15)}.c3 .kpi-icon{background:rgba(46,196,138,.15)}.c4 .kpi-icon{background:rgba(56,196,216,.15)}.c5 .kpi-icon{background:rgba(240,160,64,.15)}.c6 .kpi-icon{background:rgba(232,72,85,.15)}.c7 .kpi-icon{background:rgba(255,107,157,.15)}.c8 .kpi-icon{background:rgba(92,230,176,.15)}
+.kpi-value{font-size:26px;font-weight:700;color:#fff;line-height:1}
+.kpi-label{font-size:10px;color:var(--text2);margin-top:2px}
+.kpi-sub{font-size:9px;color:var(--text2)}
+.kpi-change{font-size:9px;margin-top:1px}
+.kpi-change.up{color:var(--green)}.kpi-change.down{color:var(--red)}
+
+.main-grid{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;gap:8px;padding:0 20px 10px;overflow:hidden}
+.panel{background:var(--card);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
+.panel-header{padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:6px}
+.panel-header .dot{width:6px;height:6px;border-radius:50%}
+.panel-header .dot.blue{background:var(--blue)}.panel-header .dot.green{background:var(--green)}.panel-header .dot.yellow{background:var(--yellow)}.panel-header .dot.purple{background:var(--purple)}.panel-header .dot.red{background:var(--red)}.panel-header .dot.cyan{background:var(--cyan)}
+.panel-body{flex:1;min-height:0}
+.panel-body.scroll{overflow-y:auto;padding:8px 12px;font-size:11px;color:var(--text2);line-height:1.8}
+
+.loading-overlay{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(8,12,36,.85);backdrop-filter:blur(6px)}
+.loading-overlay.show{display:flex}
+.loading-card{background:var(--card);border-radius:12px;padding:40px 56px;border:1px solid var(--border);text-align:center}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-card .l-title{font-size:15px;font-weight:600;color:#fff;margin-bottom:12px}
+.progress-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:8px;width:240px}
+.progress-fill{height:100%;background:var(--blue);border-radius:2px;animation:prog 2.5s ease-in-out infinite}
+@keyframes prog{0%{width:8%}25%{width:30%}50%{width:55%}75%{width:78%}100%{width:93%}}
+.loading-card .l-hint{font-size:12px;color:var(--text2)}.loading-card .l-elapsed{font-size:11px;color:#555b80;margin-top:3px}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;justify-content:center;align-items:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border-radius:12px;border:1px solid var(--border);width:520px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modal-header{padding:16px 20px 0;font-size:15px;font-weight:700;color:#fff;display:flex;justify-content:space-between;align-items:center}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)}.modal-close:hover{color:#fff}
+.modal-body{padding:16px 20px;overflow-y:auto;flex:1}
+.form-group{margin-bottom:11px}.form-group label{display:block;font-size:11px;font-weight:600;margin-bottom:3px;color:var(--text)}
+.form-group input,.form-group select{width:100%;padding:7px 9px;background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:inherit}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--blue)}
+.form-group .hint{font-size:10px;color:var(--text2);margin-top:2px}
+.form-row{display:flex;gap:8px}.form-row .form-group{flex:1}
+.upload-row{display:flex;gap:6px;align-items:flex-end}.upload-row .form-group{flex:1}
+.modal-footer{padding:0 20px 16px;display:flex;gap:8px;justify-content:flex-end}
+.test-result{font-size:11px;padding:6px 9px;border-radius:4px;margin-top:8px;display:none}
+.test-result.success{display:block;background:rgba(46,196,138,.1);color:var(--green)}
+.test-result.fail{display:block;background:rgba(232,72,85,.1);color:var(--red)}
+.toast{position:fixed;top:16px;right:16px;z-index:200;padding:10px 16px;border-radius:6px;font-size:12px;font-weight:500;display:none;max-width:380px}
+.toast.success{background:rgba(46,196,138,.12);color:var(--green);border:1px solid rgba(46,196,138,.3)}
+.toast.error{background:rgba(232,72,85,.12);color:var(--red);border:1px solid rgba(232,72,85,.3)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#2a2f55;border-radius:2px}
+
+.db-row{display:flex;flex-wrap:wrap;gap:4px}
+.db-tag{padding:3px 8px;background:var(--card2);border-radius:3px;font-size:10px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.db-tag .owner{color:var(--text2)}
+.gov-item{padding:6px 10px;background:var(--card2);border-radius:4px;border-left:3px solid var(--yellow);margin-bottom:5px;font-size:11px;display:flex;align-items:center;gap:6px}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-card"><div class="spinner"></div><div class="l-title">正在加载资产元数据...</div><div class="progress-track"><div class="progress-fill"></div></div><div class="l-hint" id="loadingHint">连接 ArgoDB 并获取数据库列表</div><div class="l-elapsed" id="loadingElapsed"></div></div>
+</div>
+
+<div class="topbar">
+    <div class="topbar-left"><div class="logo"><span class="accent">ArgoDB</span> 资产数据驾驶舱</div><div class="subtitle">ASSET DATA COCKPIT</div></div>
+    <div class="topbar-right">
+        <select id="connSelect" onchange="onConnSelectChange()"><option value="">-- 选择连接 --</option></select>
+        <button class="btn" onclick="refreshData()" id="btnRefresh" style="display:none">刷新</button>
+        <button class="btn btn-primary" onclick="openConnModal()">管理连接</button>
+    </div>
+</div>
+
+<div class="kpi-row" id="kpiRow">
+    <div class="kpi-card c1"><div class="kpi-icon">🗄️</div><div><div class="kpi-value" id="kpiDb">0</div><div class="kpi-label">数据库</div></div></div>
+    <div class="kpi-card c2"><div class="kpi-icon">📊</div><div><div class="kpi-value" id="kpiTable">0</div><div class="kpi-label">表 / 视图</div><div class="kpi-sub" id="kpiViewSub"></div></div></div>
+    <div class="kpi-card c3"><div class="kpi-icon">📋</div><div><div class="kpi-value" id="kpiColumn">0</div><div class="kpi-label">字段列</div></div></div>
+    <div class="kpi-card c4"><div class="kpi-icon">👥</div><div><div class="kpi-value" id="kpiUser">0</div><div class="kpi-label">用户数</div><div class="kpi-sub" id="kpiRoleSub"></div></div></div>
+    <div class="kpi-card c5"><div class="kpi-icon">🔐</div><div><div class="kpi-value" id="kpiPriv">0</div><div class="kpi-label">权限授权</div></div></div>
+    <div class="kpi-card c6"><div class="kpi-icon">🟢</div><div><div class="kpi-value" id="kpiSessions">0</div><div class="kpi-label">活跃会话</div></div></div>
+    <div class="kpi-card c7"><div class="kpi-icon">💬</div><div><div class="kpi-value" id="kpiComment">0%</div><div class="kpi-label">表注释率</div><div class="kpi-change" id="kpiCommentChange"></div></div></div>
+    <div class="kpi-card c8"><div class="kpi-icon">🛡️</div><div><div class="kpi-value" id="kpiHealth">0</div><div class="kpi-label">模型健康分</div><div class="kpi-change" id="kpiHealthLevel"></div></div></div>
+</div>
+
+<div class="main-grid" id="mainGrid">
+    <div class="panel"><div class="panel-header"><span class="dot blue"></span> 模型健康度评估</div><div class="panel-body" id="chartGauge"></div></div>
+    <div class="panel"><div class="panel-header"><span class="dot green"></span> 注释 & Owner 覆盖率</div><div class="panel-body" id="chartComment"></div></div>
+    <div class="panel"><div class="panel-header"><span class="dot purple"></span> 数据库概览</div><div class="panel-body scroll" id="panelDbList"></div></div>
+    <div class="panel"><div class="panel-header"><span class="dot cyan"></span> 用户与活跃度</div><div class="panel-body" id="chartUsers"></div></div>
+    <div class="panel"><div class="panel-header"><span class="dot yellow"></span> 数据库表数分布</div><div class="panel-body" id="chartDbTables"></div></div>
+    <div class="panel"><div class="panel-header"><span class="dot red"></span> 表结构分布</div><div class="panel-body" id="chartDist"></div></div>
+    <div class="panel"><div class="panel-header"><span class="dot cyan"></span> 存储格式分布</div><div class="panel-body" id="chartStorageFormat"></div></div>
+    <div class="panel"><div class="panel-header"><span class="dot red"></span> 问题表概览</div><div class="panel-body" id="chartProblem"></div></div>
+    <div class="panel"><div class="panel-header"><span class="dot green"></span> 治理建议清单</div><div class="panel-body scroll" id="panelGovernance"></div></div>
+</div>
+
+<div class="modal-overlay" id="connModalOverlay">
+    <div class="modal">
+        <div class="modal-header"><span id="connModalTitle">新建连接</span><button class="modal-close" onclick="closeConnModal()">&times;</button></div>
+        <div class="modal-body">
+            <input type="hidden" id="connEditId">
+            <div class="form-group"><label>连接名称</label><input type="text" id="connName" placeholder="如：生产环境 ArgoDB"></div>
+            <div class="form-group"><label>JDBC URL</label><input type="text" id="connUrl" placeholder="jdbc:hive2://10.0.0.1:10000/default"><div class="hint">格式：jdbc:hive2://{host}:{port}/{database}</div></div>
+            <div class="form-group"><label>驱动类名</label><input type="text" id="connDriverClass" placeholder="io.transwarp.jdbc.InceptorDriver"></div>
+            <div class="form-row"><div class="form-group"><label>用户名</label><input type="text" id="connUsername" placeholder="hive"></div><div class="form-group"><label>密码</label><input type="password" id="connPassword" placeholder="输入密码"></div></div>
+            <div class="form-group"><label>JDBC 驱动 JAR</label><div class="upload-row"><select id="connDriverJar" style="flex:1"><option value="">-- 选择或上传驱动 --</option></select><button class="btn" onclick="uploadDriver()">上传驱动</button></div><input type="file" id="driverFileInput" accept=".jar" style="display:none" onchange="handleDriverUpload(event)"></div>
+            <div class="test-result" id="testResult"></div>
+        </div>
+        <div class="modal-footer"><button class="btn" onclick="closeConnModal()">取消</button><button class="btn" onclick="testConnection()">测试连接</button><button class="btn btn-primary" onclick="saveConnection()">保存</button></div>
+    </div>
+</div>
+
+<script>
+let currentConnId=null,currentStats=null;
+const charts={};
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type;t.style.display='block';setTimeout(()=>{t.style.display='none'},3000)}
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function initCharts(){
+    charts.gauge=echarts.init(document.getElementById('chartGauge'));
+    charts.comment=echarts.init(document.getElementById('chartComment'));
+    charts.users=echarts.init(document.getElementById('chartUsers'));
+    charts.dbTables=echarts.init(document.getElementById('chartDbTables'));
+    charts.dist=echarts.init(document.getElementById('chartDist'));
+    charts.storageFormat=echarts.init(document.getElementById('chartStorageFormat'));
+    charts.problem=echarts.init(document.getElementById('chartProblem'));
+}
+function resizeCharts(){Object.values(charts).forEach(c=>{try{c.resize()}catch(e){}})}
+window.addEventListener('resize',resizeCharts);
+
+async function loadStats(connId){
+    currentConnId=connId;
+    const overlay=document.getElementById('loadingOverlay'),elapsed=document.getElementById('loadingElapsed'),hint=document.getElementById('loadingHint');
+    overlay.classList.add('show');
+    const start=Date.now();
+    const timer=setInterval(()=>{
+        const sec=Math.floor((Date.now()-start)/1000);
+        elapsed.textContent='已耗时 '+sec+' 秒';
+        hint.textContent=sec<3?'连接 ArgoDB 并获取数据库列表...':sec<8?'正在获取表结构...':'正在统计指标，请耐心等待...';
+    },500);
+    try{
+        const res=await axios.get('/api/metadata/'+connId+'/stats');
+        clearInterval(timer);overlay.classList.remove('show');
+        if(res.data.success){currentStats=res.data.data;updateKpi(currentStats);updateCharts(currentStats);updatePanels(currentStats);document.getElementById('btnRefresh').style.display='inline-flex'}
+        else showToast('查询失败: '+res.data.error,'error');
+    }catch(e){clearInterval(timer);overlay.classList.remove('show');showToast('查询失败: '+(e.response?.data?.error||e.message),'error')}
+}
+
+function updateKpi(s){
+    document.getElementById('kpiDb').textContent=s.databaseCount||0;
+    document.getElementById('kpiTable').textContent=(s.tableCount||0)+(s.viewCount||0);
+    document.getElementById('kpiViewSub').textContent=s.tableCount+' 表 + '+s.viewCount+' 视图';
+    document.getElementById('kpiColumn').textContent=(s.columnCount||0).toLocaleString();
+    document.getElementById('kpiUser').textContent=s.totalUsers||0;
+    document.getElementById('kpiRoleSub').textContent=s.totalRoles+' 角色';
+    document.getElementById('kpiPriv').textContent=(s.totalPrivileges||0).toLocaleString();
+    document.getElementById('kpiSessions').textContent=s.activeSessions||0;
+    const tcr=Math.round((s.tableCommentRate||0)*100);
+    document.getElementById('kpiComment').textContent=tcr+'%';
+    const cc=document.getElementById('kpiCommentChange');
+    cc.textContent='列注释 '+Math.round((s.columnCommentRate||0)*100)+'%';
+    cc.className='kpi-change '+(s.columnCommentRate>=0.5?'up':'down');
+    document.getElementById('kpiHealth').textContent=s.modelHealthScore||0;
+    const hl=document.getElementById('kpiHealthLevel'),score=s.modelHealthScore||0;
+    if(score>=80){hl.textContent='健康';hl.className='kpi-change up'}
+    else if(score>=60){hl.textContent='一般';hl.className='kpi-change'}
+    else{hl.textContent='需改进';hl.className='kpi-change down'}
+}
+
+function updateCharts(s){
+    // Gauge
+    charts.gauge.setOption({series:[{type:'gauge',startAngle:210,endAngle:-30,center:['50%','62%'],radius:'90%',min:0,max:100,splitNumber:10,axisLine:{show:true,lineStyle:{width:14,color:[[0.3,'#e84855'],[0.6,'#f0a040'],[0.8,'#2ec48a'],[1,'#4b8ef1']]}},pointer:{length:'62%',width:5,itemStyle:{color:'auto'}},axisTick:{distance:-14,length:5,lineStyle:{width:1,color:'#555'}},splitLine:{distance:-18,length:14,lineStyle:{width:2,color:'#555'}},axisLabel:{color:'#7b82a8',fontSize:9,distance:22},anchor:{show:true,showAbove:true,size:14,itemStyle:{borderWidth:2,borderColor:'#333'}},title:{show:true,offsetCenter:[0,'88%'],fontSize:11,color:'#7b82a8'},detail:{valueAnimation:true,fontSize:28,offsetCenter:[0,'56%'],formatter:'{value}',color:'#fff',fontWeight:'bold'},data:[{value:s.modelHealthScore||0,name:'健康分'}]}]});
+
+    // Comment & Owner rates
+    const tcr=Math.round((s.tableCommentRate||0)*100),ccr=Math.round((s.columnCommentRate||0)*100),tor=Math.round((s.tableOwnerRate||0)*100);
+    charts.comment.setOption({tooltip:{trigger:'axis'},grid:{left:'14%',right:'8%',top:'12%',bottom:'8%'},xAxis:{type:'value',max:100,axisLabel:{color:'#7b82a8',fontSize:9},splitLine:{lineStyle:{color:'#1a1f45'}}},yAxis:{type:'category',data:['表Owner率','列注释率','表注释率'],axisLabel:{color:'#d0d5f0',fontSize:10},axisLine:{show:false},axisTick:{show:false}},series:[{type:'bar',data:[{value:tor,itemStyle:{color:tor>=50?'#2ec48a':'#f0a040'}},{value:ccr,itemStyle:{color:ccr>=50?'#2ec48a':'#f0a040'}},{value:tcr,itemStyle:{color:tcr>=50?'#2ec48a':'#f0a040'}}],barWidth:22,label:{show:true,position:'right',formatter:'{c}%',color:'#d0d5f0',fontSize:10}}]});
+
+    // User overview
+    const topUsers=s.topUsers||[];
+    charts.users.setOption({tooltip:{trigger:'axis'},grid:{left:'18%',right:'8%',top:'5%',bottom:'5%'},xAxis:{type:'value',axisLabel:{color:'#7b82a8',fontSize:9},splitLine:{lineStyle:{color:'#1a1f45'}}},yAxis:{type:'category',data:topUsers.map(u=>u.userName).reverse(),axisLabel:{color:'#d0d5f0',fontSize:9,formatter:v=>v.length>14?v.slice(0,13)+'…':v},axisLine:{show:false},axisTick:{show:false}},series:[{type:'bar',data:topUsers.map(u=>u.privilegeCount).reverse(),barWidth:14,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#4b8ef1'},{offset:1,color:'#9b6dff'}])},label:{show:true,position:'right',formatter:'{c}权限',color:'#d0d5f0',fontSize:9}}]});
+
+    // Database table count distribution
+    const dbDetails=s.databaseDetails||[];
+    const dbNames=dbDetails.map(d=>d.dbName);
+    const dbTableCounts=dbDetails.map(d=>d.tableCount);
+    charts.dbTables.setOption({tooltip:{trigger:'axis'},grid:{left:'18%',right:'8%',top:'5%',bottom:'5%'},xAxis:{type:'value',axisLabel:{color:'#7b82a8',fontSize:9},splitLine:{lineStyle:{color:'#1a1f45'}}},yAxis:{type:'category',data:dbNames,axisLabel:{color:'#d0d5f0',fontSize:9},axisLine:{show:false},axisTick:{show:false}},series:[{type:'bar',data:dbTableCounts,barWidth:14,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#4b8ef1'},{offset:1,color:'#9b6dff'}])},label:{show:true,position:'right',formatter:'{c}表',color:'#d0d5f0',fontSize:9}}]});
+
+    // Table distribution
+    const normalTables=(s.tableCount||0)-(s.emptyTables||0)-(s.wideTables50||0);
+    const distData=[];
+    if(normalTables>0)distData.push({value:normalTables,name:'标准表',itemStyle:{color:'#4b8ef1'}});
+    if(s.emptyTables>0)distData.push({value:s.emptyTables,name:'空表',itemStyle:{color:'#e84855'}});
+    if(s.wideTables50>0)distData.push({value:s.wideTables50,name:'宽表(>50列)',itemStyle:{color:'#f0a040'}});
+    if(s.viewCount>0)distData.push({value:s.viewCount,name:'视图',itemStyle:{color:'#9b6dff'}});
+    if(s.materializedViewCount>0)distData.push({value:s.materializedViewCount,name:'物化视图',itemStyle:{color:'#38c4d8'}});
+    if(distData.length===0)distData.push({value:1,name:'暂无数据',itemStyle:{color:'#333'}});
+    charts.dist.setOption({tooltip:{trigger:'item',formatter:'{b}: {c}'},legend:{bottom:0,textStyle:{color:'#7b82a8',fontSize:8}},series:[{type:'pie',radius:['42%','72%'],center:['50%','48%'],data:distData,label:{color:'#7b82a8',fontSize:9}}]});
+
+    // Storage format distribution
+    const totalTblForFmt=(s.tableCount||0)+(s.viewCount||0);
+    const txTbl=s.transactionalTables||0,holoTbl=s.holodeskTables||0,txtTbl=s.textTables||0,otherFmt=Math.max(0,totalTblForFmt-txTbl-holoTbl-txtTbl);
+    const fmtData=[];
+    if(txTbl>0)fmtData.push({value:txTbl,name:'事务表',itemStyle:{color:'#2ec48a'}});
+    if(holoTbl>0)fmtData.push({value:holoTbl,name:'Holodesk',itemStyle:{color:'#9b6dff'}});
+    if(txtTbl>0)fmtData.push({value:txtTbl,name:'Text/ORC',itemStyle:{color:'#4b8ef1'}});
+    if(otherFmt>0)fmtData.push({value:otherFmt,name:'其他',itemStyle:{color:'#7b82a8'}});
+    if(fmtData.length===0)fmtData.push({value:1,name:'暂无数据',itemStyle:{color:'#333'}});
+    charts.storageFormat.setOption({tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},legend:{bottom:0,textStyle:{color:'#7b82a8',fontSize:9}},series:[{type:'pie',radius:['40%','68%'],center:['50%','48%'],data:fmtData,label:{color:'#7b82a8',fontSize:9}}]});
+
+    // Problem overview
+    const totalTbl=(s.tableCount||0)+(s.viewCount||0);
+    const problemData=[{name:'空表',value:s.emptyTables||0,color:'#e84855'},{name:'宽表(>50列)',value:s.wideTables50||0,color:'#f0a040'},{name:'宽表(>100列)',value:s.wideTables100||0,color:'#ff6b35'},{name:'无主键',value:s.tablesWithoutPrimaryKey||0,color:'#7b82a8'},{name:'无注释表',value:totalTbl-(s.tablesWithComment||0),color:'#555b80'},{name:'无Owner表',value:totalTbl-(s.tablesWithOwner||0),color:'#f06090'}];
+    charts.problem.setOption({tooltip:{trigger:'axis'},grid:{left:'18%',right:'6%',top:'8%',bottom:'5%'},xAxis:{type:'value',axisLabel:{color:'#7b82a8',fontSize:8},splitLine:{lineStyle:{color:'#1a1f45'}}},yAxis:{type:'category',data:problemData.map(d=>d.name).reverse(),axisLabel:{color:'#d0d5f0',fontSize:9},axisLine:{show:false},axisTick:{show:false}},series:[{type:'bar',data:problemData.map(d=>({value:d.value,itemStyle:{color:d.color}})).reverse(),barWidth:14,label:{show:true,position:'right',formatter:'{c}',color:'#d0d5f0',fontSize:9}}]});
+}
+
+function updatePanels(s){
+    // DB list
+    const dbPanel=document.getElementById('panelDbList');
+    const dbs=s.databaseDetails||[];
+    let dbHtml='<div style="margin-bottom:10px;color:var(--text2);font-size:10px">版本: ArgoDB '+(s.tdhVersion||'')+' | 分区表: '+(s.partitionCount||0)+' | 分桶表: '+(s.bucketTableCount||0)+' | UDF: '+(s.udfCount||0)+' | MV: '+(s.materializedViewCount||0)+' | 分区总数: '+(s.totalPartitions||0)+'</div><div class="db-row">';
+    for(const d of dbs){
+        dbHtml+='<div class="db-tag"><b>'+esc(d.dbName)+'</b> <span class="owner">'+(d.ownerName||'?')+'</span> <span style="color:var(--green)">'+d.tableCount+'表</span> '+(d.viewCount>0?'<span style="color:var(--cyan)">'+d.viewCount+'视图</span>':'')+'</div>';
+    }
+    dbHtml+='</div>';
+    dbPanel.innerHTML=dbHtml;
+
+    // Governance
+    const govPanel=document.getElementById('panelGovernance');
+    const items=s.governanceSuggestions||[];
+    govPanel.innerHTML=items.length===0?'<div style="color:var(--green);text-align:center;padding-top:20px;font-size:12px">✅ 资产维护良好</div>':items.map(i=>'<div class="gov-item">🔸 '+esc(i)+'</div>').join('');
+}
+
+// ===== Connections =====
+async function loadConnections(){
+    try{
+        const res=await axios.get('/api/connections');
+        if(res.data.success){
+            const sel=document.getElementById('connSelect'),cur=sel.value;
+            sel.innerHTML='<option value="">-- 选择连接 --</option>';
+            for(const c of res.data.data)sel.innerHTML+='<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>';
+            if(cur&&[...sel.options].some(o=>o.value===cur))sel.value=cur;
+        }
+    }catch(e){showToast('加载连接列表失败: '+e.message,'error')}
+}
+function onConnSelectChange(){const id=document.getElementById('connSelect').value;if(id)loadStats(id)}
+function refreshData(){if(currentConnId)loadStats(currentConnId)}
+
+// ===== Modal =====
+async function loadDrivers(){
+    try{
+        const res=await axios.get('/api/drivers');
+        if(res.data.success){
+            const sel=document.getElementById('connDriverJar'),cur=sel.value;
+            sel.innerHTML='<option value="">-- 选择或上传驱动 --</option>';
+            for(const d of res.data.data)sel.innerHTML+='<option value="'+esc(d)+'">'+esc(d)+'</option>';
+            if(cur)sel.value=cur;
+        }
+    }catch(e){}
+}
+async function testConnection(){
+    const data={id:document.getElementById('connEditId').value||null,name:document.getElementById('connName').value.trim(),url:document.getElementById('connUrl').value.trim(),driverClassName:document.getElementById('connDriverClass').value.trim(),username:document.getElementById('connUsername').value.trim(),password:document.getElementById('connPassword').value,driverJarFile:document.getElementById('connDriverJar').value};
+    if(!data.url||!data.driverClassName||!data.username||!data.driverJarFile){showToast('请填写必填字段','error');return}
+    const el=document.getElementById('testResult');el.className='test-result';el.textContent='正在测试...';el.style.display='block';
+    try{
+        const res=await axios.post('/api/connections/test',data);
+        el.className='test-result '+(res.data.success?'success':'fail');
+        el.textContent=res.data.success?'连接测试成功':'连接测试失败: '+res.data.error;
+    }catch(e){el.className='test-result fail';el.textContent='连接测试失败: '+(e.response?.data?.error||e.message)}
+}
+async function saveConnection(){
+    const id=document.getElementById('connEditId').value;
+    const data={id:id||null,name:document.getElementById('connName').value.trim(),url:document.getElementById('connUrl').value.trim(),driverClassName:document.getElementById('connDriverClass').value.trim(),username:document.getElementById('connUsername').value.trim(),password:document.getElementById('connPassword').value,driverJarFile:document.getElementById('connDriverJar').value,createdAt:0};
+    if(!data.name||!data.url||!data.driverClassName||!data.username||!data.driverJarFile){showToast('请填写所有必填字段','error');return}
+    try{
+        const method=id?'put':'post',url=id?'/api/connections/'+id:'/api/connections';
+        const res=await axios[method](url,data);
+        if(res.data.success){showToast('连接已保存','success');loadConnections();closeConnModal()}
+        else showToast('保存失败: '+res.data.error,'error');
+    }catch(e){showToast('保存失败: '+(e.response?.data?.error||e.message),'error')}
+}
+async function uploadDriver(){document.getElementById('driverFileInput').click()}
+async function handleDriverUpload(event){
+    const file=event.target.files[0];if(!file)return;
+    const fd=new FormData();fd.append('file',file);
+    try{
+        const res=await axios.post('/api/drivers/upload',fd);
+        if(res.data.success){showToast('驱动上传成功','success');await loadDrivers();document.getElementById('connDriverJar').value=res.data.data}
+        else showToast('驱动上传失败: '+res.data.error,'error');
+    }catch(e){showToast('驱动上传失败: '+(e.response?.data?.error||e.message),'error')}
+    event.target.value='';
+}
+function openConnModal(editId){
+    ['connEditId','connName','connUrl','connDriverClass','connUsername','connPassword','connDriverJar'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('testResult').className='test-result';document.getElementById('testResult').style.display='none';
+    document.getElementById('connModalTitle').textContent='新建连接';loadDrivers();
+    if(editId){document.getElementById('connModalTitle').textContent='编辑连接';
+        axios.get('/api/connections/'+editId).then(res=>{if(res.data.success){const c=res.data.data;
+            document.getElementById('connEditId').value=c.id;document.getElementById('connName').value=c.name||'';
+            document.getElementById('connUrl').value=c.url||'';document.getElementById('connDriverClass').value=c.driverClassName||'';
+            document.getElementById('connUsername').value=c.username||'';document.getElementById('connPassword').value=c.password||'';
+            document.getElementById('connDriverJar').value=c.driverJarFile||'';}})}
+    document.getElementById('connModalOverlay').classList.add('show');
+}
+function closeConnModal(){document.getElementById('connModalOverlay').classList.remove('show')}
+document.getElementById('connModalOverlay').addEventListener('click',function(e){if(e.target===this)closeConnModal()});
+
+window.addEventListener('DOMContentLoaded',()=>{loadConnections();initCharts();resizeCharts()});
+</script>
+</body>
+</html>

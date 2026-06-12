@@ -1,0 +1,24 @@
+# Build
+target/
+*.jar
+!data/drivers/*.jar
+
+# Runtime data with credentials
+data/connections.json
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
