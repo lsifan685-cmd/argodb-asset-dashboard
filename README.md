@@ -74,3 +74,7 @@ src/main/java/com/cc/argodb/dashboard/
 ### 驱动管理
 - `POST /api/drivers/upload` — 上传 JAR
 - `GET  /api/drivers` — 驱动列表
+
+### 效果示意
+<img width="2878" height="1620" alt="image" src="https://github.com/user-attachments/assets/702d3755-7de1-49a1-beb0-2eb54cd55e92" />
+
