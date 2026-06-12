@@ -76,5 +76,8 @@ src/main/java/com/cc/argodb/dashboard/
 - `GET  /api/drivers` — 驱动列表
 
 ### 效果示意
+- 配置数据源 仅需 ip 端口 用户 密码 和驱动程序
+<img width="2878" height="1610" alt="image" src="https://github.com/user-attachments/assets/103771e1-862e-4d21-a9e7-18c1fcb744da" />
+- 等待10秒即可呈现数据资产情况
 <img width="2878" height="1620" alt="image" src="https://github.com/user-attachments/assets/702d3755-7de1-49a1-beb0-2eb54cd55e92" />
 
